@@ -4,29 +4,118 @@
   <meta charset="UTF-8">
   <title>Katalog odcinków</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-    .episode { margin: 10px 0; padding: 10px; border-bottom: 1px solid #ccc; cursor: pointer; }
-    .episode h3 { margin: 0; font-size: 1.1em; color: #007bff; text-decoration: underline; }
-    .episode:hover { background-color: #f0f0f0; }
-    #pagination { text-align: center; margin-top: 20px; }
-    button { padding: 8px 16px; margin: 0 5px; font-size: 16px; }
+    :root {
+      --bg: #ffffff;
+      --text: #111111;
+      --accent: #007bff;
+      --card: #f0f0f0;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --accent: #4dabf7;
+      --card: #1e1e1e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .episode {
+      background: var(--card);
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .episode:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    .episode h3 {
+      margin: 0;
+      font-size: 1.1em;
+    }
+
+    #pagination {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 18px;
+      margin: 0 6px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    #themeToggle {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    #loading {
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <div id="themeToggle">🌙</div>
   <h1>Katalog odcinków</h1>
   <div id="episodes"></div>
+
   <div id="pagination">
-    <button id="prev" disabled>Poprzednia</button>
+    <button id="prev">Poprzednia</button>
     <span id="page">Strona 1</span>
     <button id="next">Następna</button>
   </div>
+
   <p id="loading">Ładowanie...</p>
 
   <script>
     const DATA_URL = "https://raw.githubusercontent.com/KiepscyTV/KiepscyTV.github.io/refs/tags/1.0.0/bin/episodes.json";
+    const EPISODES_PER_PAGE = 20;
+    const STORAGE_KEY = "kiepscy_page";
+
     let allEpisodes = [];
-    const episodesPerPage = 20;
-    let currentPage = 0;
+    let currentPage = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
+
+    // Tryb ciemny
+    const themeToggle = document.getElementById('themeToggle');
+    if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+    themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    themeToggle.onclick = () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    };
 
     async function fetchEpisodes() {
       try {
@@ -34,8 +123,8 @@
         const json = await response.json();
         allEpisodes = json.episodes.flat();
         renderPage(currentPage);
-        document.getElementById('loading').style.display = 'none';
         setupPagination();
+        document.getElementById('loading').style.display = 'none';
       } catch (error) {
         document.getElementById('loading').innerText = 'Błąd ładowania danych.';
         console.error('Błąd pobierania danych:', error);
@@ -46,39 +135,38 @@
       const container = document.getElementById('episodes');
       container.innerHTML = '';
 
-      const start = page * episodesPerPage;
-      const end = start + episodesPerPage;
+      const start = page * EPISODES_PER_PAGE;
+      const end = start + EPISODES_PER_PAGE;
       const episodes = allEpisodes.slice(start, end);
 
       episodes.forEach(ep => {
         const div = document.createElement('div');
         div.className = 'episode';
         div.innerHTML = `<h3>${ep.name}</h3>`;
-        div.addEventListener('click', () => {
-          window.open(ep.url, '_blank');
-        });
+        div.onclick = () => window.open(ep.url, '_blank');
         container.appendChild(div);
       });
 
       document.getElementById('page').innerText = `Strona ${page + 1}`;
       document.getElementById('prev').disabled = page === 0;
       document.getElementById('next').disabled = end >= allEpisodes.length;
+
+      localStorage.setItem(STORAGE_KEY, page);
     }
 
     function setupPagination() {
-      document.getElementById('prev').addEventListener('click', () => {
+      document.getElementById('prev').onclick = () => {
         if (currentPage > 0) {
           currentPage--;
           renderPage(currentPage);
         }
-      });
-
-      document.getElementById('next').addEventListener('click', () => {
-        if ((currentPage + 1) * episodesPerPage < allEpisodes.length) {
+      };
+      document.getElementById('next').onclick = () => {
+        if ((currentPage + 1) * EPISODES_PER_PAGE < allEpisodes.length) {
           currentPage++;
           renderPage(currentPage);
         }
-      });
+      };
     }
 
     fetchEpisodes();
