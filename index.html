@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Katalog odcinków</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    .episode { margin: 10px 0; padding: 10px; border-bottom: 1px solid #ccc; cursor: pointer; }
+    .episode h3 { margin: 0; font-size: 1.1em; color: #007bff; text-decoration: underline; }
+    .episode:hover { background-color: #f0f0f0; }
+    #pagination { text-align: center; margin-top: 20px; }
+    button { padding: 8px 16px; margin: 0 5px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Katalog odcinków</h1>
+  <div id="episodes"></div>
+  <div id="pagination">
+    <button id="prev" disabled>Poprzednia</button>
+    <span id="page">Strona 1</span>
+    <button id="next">Następna</button>
+  </div>
+  <p id="loading">Ładowanie...</p>
+
+  <script>
+    const DATA_URL = "https://raw.githubusercontent.com/KiepscyTV/KiepscyTV.github.io/refs/tags/1.0.0/bin/episodes.json";
+    let allEpisodes = [];
+    const episodesPerPage = 20;
+    let currentPage = 0;
+
+    async function fetchEpisodes() {
+      try {
+        const response = await fetch(DATA_URL);
+        const json = await response.json();
+        allEpisodes = json.episodes.flat();
+        renderPage(currentPage);
+        document.getElementById('loading').style.display = 'none';
+        setupPagination();
+      } catch (error) {
+        document.getElementById('loading').innerText = 'Błąd ładowania danych.';
+        console.error('Błąd pobierania danych:', error);
+      }
+    }
+
+    function renderPage(page) {
+      const container = document.getElementById('episodes');
+      container.innerHTML = '';
+
+      const start = page * episodesPerPage;
+      const end = start + episodesPerPage;
+      const episodes = allEpisodes.slice(start, end);
+
+      episodes.forEach(ep => {
+        const div = document.createElement('div');
+        div.className = 'episode';
+        div.innerHTML = `<h3>${ep.name}</h3>`;
+        div.addEventListener('click', () => {
+          window.open(ep.url, '_blank');
+        });
+        container.appendChild(div);
+      });
+
+      document.getElementById('page').innerText = `Strona ${page + 1}`;
+      document.getElementById('prev').disabled = page === 0;
+      document.getElementById('next').disabled = end >= allEpisodes.length;
+    }
+
+    function setupPagination() {
+      document.getElementById('prev').addEventListener('click', () => {
+        if (currentPage > 0) {
+          currentPage--;
+          renderPage(currentPage);
+        }
+      });
+
+      document.getElementById('next').addEventListener('click', () => {
+        if ((currentPage + 1) * episodesPerPage < allEpisodes.length) {
+          currentPage++;
+          renderPage(currentPage);
+        }
+      });
+    }
+
+    fetchEpisodes();
+  </script>
+</body>
+</html>
